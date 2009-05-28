@@ -96,7 +96,7 @@ else:
 if ShowMeDo_800_600:
     FONT = (FONTNAME, 8, 'bold')
 else:
-    FONT = (FONTNAME, 7, 'bold')
+    FONT = (FONTNAME, 10, 'bold')
 
 # help text positions
 HELP_ADD_OFFSET = -95
@@ -1113,31 +1113,35 @@ if __name__ == '__main__':
     ##
     numbers_frm = T.Frame(Ctrl); numbers_frm.pack(side=T.LEFT)
 
+    # spacer
+    spacer_1 = T.Label(numbers_frm, text="")
+    spacer_1.grid(row=0, column=0)
+
     # first number
     entry_1 = T.Entry(numbers_frm, justify=T.CENTER, textvariable=Canv.input_1)
     label_1 = T.Label(numbers_frm, text="?")
-    entry_1.grid(row=0, column=0)
-    label_1.grid(row=1, column=0)
+    entry_1.grid(row=0, column=1)
+    label_1.grid(row=1, column=1)
 
     # sign (+ or -)
     signbtn = T.Button(numbers_frm, width=26, bitmap="@plus.xbm", command=ChangeSign)
-    signbtn.grid(row=0, column=1)
+    signbtn.grid(row=0, column=2)
 
     # second number
     entry_2 = T.Entry(numbers_frm, justify=T.CENTER, textvariable=Canv.input_2)
     label_2 = T.Label(numbers_frm, text="?")
-    entry_2.grid(row=0, column=2)
-    label_2.grid(row=1, column=2)
+    entry_2.grid(row=0, column=3)
+    label_2.grid(row=1, column=3)
 
     # equals
-    T.Label(numbers_frm, text=" =  ", width=4, font=(FONTNAME, 20, 'bold')).grid(row=0, column=3)
+    T.Label(numbers_frm, text=" =  ", width=4, font=(FONTNAME, 20, 'bold')).grid(row=0, column=4)
 
     # answer
     # use standard width for Entry, not Label
     answ = T.Label(numbers_frm, justify=T.CENTER, width=5, text="")
-    answ.grid(row=0, column=4)
+    answ.grid(row=0, column=5)
     # pad to make more room for thousands column
-    T.Label(numbers_frm, text="Answer", width=6).grid(row=1, column=4, padx=25)
+    T.Label(numbers_frm, text="Answer", width=6).grid(row=1, column=5, padx=25)
 
     ##
     ## PACK subframe containing control buttons
