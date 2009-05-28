@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # BlockHead.py -- visual calculator for addition and subtraction of whole numbers
 # Copyright 2008, 2009 John Posner
 
@@ -23,8 +24,8 @@ import sys
 from time import sleep
 import Tkinter as T
 
-__date__ = '8-Apr-2009'
-__version__ = 1045
+__date__ = '28-May-2009'
+__version__ = 1046
 
 ####################
 #################### global variables
@@ -95,7 +96,7 @@ else:
 if ShowMeDo_800_600:
     FONT = (FONTNAME, 8, 'bold')
 else:
-    FONT = (FONTNAME, 10, 'bold')
+    FONT = (FONTNAME, 7, 'bold')
 
 # help text positions
 HELP_ADD_OFFSET = -95
