@@ -25,7 +25,7 @@ from time import sleep
 import Tkinter as T
 
 __date__ = '28-May-2009'
-__version__ = 1046
+__version__ = 1048
 
 ####################
 #################### global variables
@@ -96,7 +96,7 @@ else:
 if ShowMeDo_800_600:
     FONT = (FONTNAME, 8, 'bold')
 else:
-    FONT = (FONTNAME, 7, 'bold')
+    FONT = (FONTNAME, 10, 'bold')
 
 # help text positions
 HELP_ADD_OFFSET = -95
@@ -104,7 +104,6 @@ HELP_SUB_OFFSET = -105
 TEXT_FONT = FONT
 
 # colors
-
 BGND_COLOR = '#D8D8D8'
 INPT_COLOR = '#00FF00'
 ANSW_COLOR = '#00CCFF'
@@ -848,31 +847,35 @@ def DrawColumnsAndBlocks(h1_val, t1_val, o1_val, h2_val, t2_val, o2_val):
     global SelectableBlockTags
 
     # configure column locations, based on positions of entry/answer fields
+    #
+    # must take into account both:
+    # * offset of numbers_grid frame within numbers_frm frame
+    # * offset of entry_N field within numbers_grid frame
     if mode.get() == ADD_MODE:
         # first set of columns
-        center = int(entry_1.winfo_x() + 0.5*entry_1.winfo_width())
+        center = int(numbers_grid.winfo_x() + entry_1.winfo_x() + 0.5*entry_1.winfo_width())
         huns_1 = center - COL_OFFSET*1.5
         tens_1 = huns_1 + COL_OFFSET
         ones_1 = huns_1 + COL_OFFSET*2
         # second set of columns
-        center = int(entry_2.winfo_x() + 0.5*entry_2.winfo_width())
+        center = int(numbers_grid.winfo_x() + entry_2.winfo_x() + 0.5*entry_2.winfo_width())
         huns_2 = center - COL_OFFSET*1.5
         tens_2 = huns_2 + COL_OFFSET
         ones_2 = huns_2 + COL_OFFSET*2
         # answer columns
-        center = int(answ.winfo_x() + 0.5*answ.winfo_width())
+        center = int(numbers_grid.winfo_x() + answ.winfo_x() + 0.5*answ.winfo_width())
         huns_A = center - COL_OFFSET*1.5
         tens_A = huns_A + COL_OFFSET
         ones_A = huns_A + COL_OFFSET*2
         thou_A = huns_A - COL_OFFSET
     elif mode.get() == SUB_MODE:
         # answer columns are at left, above first number
-        center = int(entry_1.winfo_x() + 0.5*entry_1.winfo_width())
+        center = int(numbers_grid.winfo_x() + entry_1.winfo_x() + 0.5*entry_1.winfo_width())
         huns_A = center - COL_OFFSET*1.5
         tens_A = huns_A + COL_OFFSET
         ones_A = huns_A + COL_OFFSET*2
         # second set of columns
-        center = int(entry_2.winfo_x() + 0.5*entry_2.winfo_width())
+        center = int(numbers_grid.winfo_x() + entry_2.winfo_x() + 0.5*entry_2.winfo_width())
         huns_2 = center - COL_OFFSET*1.5
         tens_2 = huns_2 + COL_OFFSET
         ones_2 = huns_2 + COL_OFFSET*2
@@ -1111,40 +1114,43 @@ if __name__ == '__main__':
     ##
     ## GRID subframe containing numbers, their labels, and operators
     ##
-    numbers_frm = T.Frame(Ctrl); numbers_frm.pack(side=T.LEFT)
+    numbers_frm = T.Frame(Ctrl)
+    numbers_frm.pack(side=T.LEFT, expand=True, fill=T.X)
+    numbers_grid = T.Frame(numbers_frm)
+    numbers_grid.pack(anchor=T.CENTER)
 
     # first number
-    entry_1 = T.Entry(numbers_frm, justify=T.CENTER, textvariable=Canv.input_1)
-    label_1 = T.Label(numbers_frm, text="?")
+    entry_1 = T.Entry(numbers_grid, justify=T.CENTER, textvariable=Canv.input_1)
+    label_1 = T.Label(numbers_grid, text="?")
     entry_1.grid(row=0, column=0)
     label_1.grid(row=1, column=0)
 
     # sign (+ or -)
-    signbtn = T.Button(numbers_frm, width=26, bitmap="@plus.xbm", command=ChangeSign)
+    signbtn = T.Button(numbers_grid, width=26, bitmap="@plus.xbm", command=ChangeSign)
     signbtn.grid(row=0, column=1)
 
     # second number
-    entry_2 = T.Entry(numbers_frm, justify=T.CENTER, textvariable=Canv.input_2)
-    label_2 = T.Label(numbers_frm, text="?")
+    entry_2 = T.Entry(numbers_grid, justify=T.CENTER, textvariable=Canv.input_2)
+    label_2 = T.Label(numbers_grid, text="?")
     entry_2.grid(row=0, column=2)
     label_2.grid(row=1, column=2)
 
     # equals
-    T.Label(numbers_frm, text=" =  ", width=4, font=(FONTNAME, 20, 'bold')).grid(row=0, column=3)
+    T.Label(numbers_grid, text="  =  ", width=4, font=(FONTNAME, 20, 'bold')).grid(row=0, column=3)
 
     # answer
     # use standard width for Entry, not Label
-    answ = T.Label(numbers_frm, justify=T.CENTER, width=5, text="")
+    answ = T.Label(numbers_grid, justify=T.CENTER, width=5, text="")
     answ.grid(row=0, column=4)
     # pad to make more room for thousands column
-    T.Label(numbers_frm, text="Answer", width=6).grid(row=1, column=4, padx=25)
+    T.Label(numbers_grid, text="Answer", width=6).grid(row=1, column=4, padx=25)
 
     ##
     ## PACK subframe containing control buttons
     ##
     mode = T.IntVar()
     btns_frm = T.Frame(Ctrl)
-    btns_frm.pack(side=T.LEFT, fill=T.X, expand=True, padx=15) # need both fill and expand
+    btns_frm.pack(side=T.LEFT, padx=15)
 
     T.Button(btns_frm, text="Exit", command=ExitCmd).pack(side=T.RIGHT)
     T.Button(btns_frm, text="New" , command=NewCmd).pack(side=T.RIGHT)
