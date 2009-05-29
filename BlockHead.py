@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 # BlockHead.py -- visual calculator for addition and subtraction of whole numbers
 # Copyright 2008, 2009 John Posner
 
