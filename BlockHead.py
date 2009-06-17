@@ -24,8 +24,8 @@ import sys
 from time import sleep
 import Tkinter as T
 
-__date__ = '28-May-2009'
-__version__ = 1048
+__date__ = '16-Jun-2009'
+__version__ = 1049
 
 ####################
 #################### global variables
@@ -95,8 +95,10 @@ else:
 
 if ShowMeDo_800_600:
     FONT = (FONTNAME, 8, 'bold')
+    SPLASHFONT = (FONTNAME, 12, 'bold')
 else:
     FONT = (FONTNAME, 10, 'bold')
+    SPLASHFONT = (FONTNAME, 14, 'bold')
 
 # help text positions
 HELP_ADD_OFFSET = -95
@@ -108,7 +110,7 @@ BGND_COLOR = '#D8D8D8'
 INPT_COLOR = '#00FF00'
 ANSW_COLOR = '#00CCFF'
 TGT_COLOR = '#00FF00'
-CARRY_COLOR = '#FF0000'
+CARRY_COLOR = '#008000'
 BORROWBLK_COLOR = '#f0f000'
 SUBTRACT_COLOR = '#CCCCCC'
 COLORS = {'hb': '#FF7D7D', # hundreds block
@@ -278,12 +280,14 @@ class Column():
         if mode.get() == SUB_MODE or blk.value == 0:
             return
 
-        # maybe: create carry icon
+        # maybe: display carry arrow
         carrytag = self.tag + CARRYSUFFIX
         if self.Total() >= 10 and not carry_button_suppress and not Canv.find_withtag(carrytag):
             startx, starty = LowerLeft(self.id)
-            self.carryarrow = Canv.create_bitmap(startx, starty+10,
-                                                 bitmap = "@left_arrow.xbm", tags=carrytag)
+            self.carryarrow = Canv.create_image(startx, starty+10,
+                                                image=LEFT_ARROW, tags=carrytag)
+            
+            # activate the carry arrow            
             Canv.tag_bind(carrytag, "<Button-1>", self.Carry)
             CarryCount += 1
 
@@ -420,7 +424,7 @@ class Column():
         borrow_tag = borrow_blk.tag
         borrow_newblk_tag = borrow_tag + "_borrowfrom"
 
-        # delete the topmost block from this column
+        # delete the borrow arrow and the topmost block from this column
         Canv.delete(borrow_tag)
         del self.blocks[-1]
 
@@ -947,14 +951,14 @@ def BorrowButtons():
         subtract_val = Cols['%s2_col' % colchar].Total()
         borrow_tag = '%s_borrow' % colchar
 
-        # remove any existing borrow image
+        # remove any existing borrow image(s)
         Canv.delete(borrow_tag)
 
         # as appropariate, create borrow image and set binding
         if current_val < subtract_val:
             startx, starty = LowerLeft(to_tag)
-            Canv.create_bitmap(startx, starty+10,
-                               bitmap = "@right_arrow.xbm", tags=borrow_tag)
+            Canv.create_image(startx, starty+10,
+                              image=RIGHT_ARROW, tags=borrow_tag)
             Canv.tag_bind(borrow_tag, "<Button-1>", from_col.Borrow)
 
 def CalcAnswer():
@@ -1010,8 +1014,8 @@ def SetMode():
     ValidateKey()
     Canv.update()
 
-def Debug():
-    pass
+def Debug(evt):
+    _=1
 
 def NewCmd():
     """
@@ -1168,11 +1172,15 @@ if __name__ == '__main__':
     entry_1['bg'] = INPT_COLOR
     entry_2['bg'] = INPT_COLOR
 
+    # carry/borrow images (must wait to create)
+    LEFT_ARROW = T.BitmapImage(file="left_arrow.xbm", foreground=CARRY_COLOR)
+    RIGHT_ARROW = T.BitmapImage(file="right_arrow.xbm", foreground=CARRY_COLOR)
+
     # splash screen
     Canv.update()
     splash_id = Canv.create_text(RootWin.winfo_width()*0.5, RootWin.winfo_height()*0.4,
-                                 text = "BlockHead\nby John Posner",
-                                 justify=T.CENTER, font='helvetica 18 bold italic')
+                                 text = "BlockHead\n\nAddition/Subtraction\nCalculator",
+                                 justify=T.CENTER, font=SPLASHFONT)
     # remove splash screen after pause
     RootWin.after(2500, ClearSplash)
     SetMode()
