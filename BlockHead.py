@@ -490,7 +490,6 @@ class CtrlPanel(object):
             Num2 = Number("n2", digits[1], allocs[1].x + allocs[1].width // 2, bottomY)
 
             # enable borrow buttons (maybe)
-            UpdateScreen()
             DrawBorrowButtons()
 
         # disable button and entry fields
@@ -499,7 +498,6 @@ class CtrlPanel(object):
 
         # update panel
         Bpnl.canv.show_all()
-        UpdateScreen()
 
     def ValidateInput(self, fld, event):
         """
@@ -579,8 +577,6 @@ class Number(object):
             Bpnl.canv.put(col.total_label,
                           col.x + P.COL_WID/2,
                           col.y + P.ANSR_OFFSET)
-
-        UpdateScreen()
 
         # record list in attribute
         return col_list
@@ -797,8 +793,6 @@ class Column():
         self.total_label.set_text(strval)
         self.total_label.show()
 
-        UpdateScreen()
-
     def Total(self):
         """
         base-10 total of column's blocks
@@ -841,7 +835,6 @@ class Column():
             excessblk = Block(total - P.BASE, srccol, True)
 
         srccol.Show()
-        UpdateScreen()
         sleep(0.25)
 
         # collapse the block of P.BASE units into a single unit
@@ -853,10 +846,7 @@ class Column():
             eventbox = fillblk.draggable_widget
             eventbox.remove(eventbox.get_child())
             eventbox.add(gtk.image_new_from_pixbuf(smaller_pbuf))
-            UpdateScreen()
             sleep(0.07)
-
-        UpdateScreen()
 
         # move the shrunken (1-unit-high) block to the next column
         sleep(0.25)
@@ -869,7 +859,6 @@ class Column():
 
         carryblk = Block(1, destcol)
         destcol.Show()
-        UpdateScreen()
 
         # delete the block from this column, and update column total
 
@@ -882,7 +871,6 @@ class Column():
         fillblk.draggable_widget.destroy()
         srccol.Remove(fillblk)
         srccol.Show()
-        UpdateScreen()
 
         # are we done?
         CalcAnswer()
@@ -940,7 +928,6 @@ class Column():
                 eventbox.allocation.x,
                 top_of_destblock_Y - i*P.UNIT_HGT)
             sleep(0.07)
-            UpdateScreen()
 
         # officially replace "borrow from" block in source column
         # with "borrow to" block in destination column
@@ -949,9 +936,6 @@ class Column():
         srccol.Show()
         borrow_to_block = Block(P.BASE, destcol)
         destcol.Show()
-
-        # show results
-        UpdateScreen()
 
         # recalc the borrow buttons
         DrawBorrowButtons()
@@ -1136,7 +1120,6 @@ def MouseUp_Sub(widget):
         # move the block to be subtracted
         AniMove(widget, endX, endY)
 
-        UpdateScreen()
         sleep(0.25)
 
         # delete block from original column
@@ -1159,7 +1142,6 @@ def MouseUp_Sub(widget):
         if result > 0:
             blk = Block(result, TargetColumn)
         TargetColumn.Show()
-        UpdateScreen()
 
         # recalc the borrow buttons
         DrawBorrowButtons()
@@ -1211,12 +1193,10 @@ def MouseUp_Add(widget):
 
         # reset target column background
         PixelFill(TargetColumn.image, TargetColumn.color)
-        UpdateScreen()
 
     else:
         # snap back
         AniMove(widget, SnapX, SnapY)
-        UpdateScreen()
 
 def AniMove(widget, ex, ey):
     """
@@ -1232,12 +1212,10 @@ def AniMove(widget, ex, ey):
         newX = int(pf*ex + (1-pf)*origX)
         newY = int(pf*ey + (1-pf)*origY)
         widget.parent.move(widget, newX, newY)
-        UpdateScreen()
         sleep(0.25/count)
 
     # final move, to take care of roundoff errors
     widget.parent.move(widget, ex, ey)
-    UpdateScreen()
 
 def InTargetColumn(widget):
     """
@@ -1350,14 +1328,6 @@ def SetLabelColor(widget, colorstr):
     """
     widget.modify_fg(gtk.STATE_INSENSITIVE, widget.get_colormap().alloc_color(colorstr))
 
-def UpdateScreen():
-    """
-    update the display screen
-    """
-    mainwin.show_all()
-    while gtk.events_pending():
-        gtk.main_iteration(False)
-
 def CreateBlockImage(value, pixelcolor, borrow_block_flag=False):
     img = gtk.Image()
     wid, hgt = P.BLOCK_WID, value * P.UNIT_HGT
@@ -1436,7 +1406,6 @@ if __name__ == "__main__":
 
     _tempwin = gtk.Window()
     _tempwin.realize()
-    #UpdateScreen()
     MyDrawable = _tempwin.window
 
     mainwin = gtk.Window(gtk.WINDOW_TOPLEVEL)
