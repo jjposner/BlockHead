@@ -16,7 +16,7 @@ from time import sleep
 __date__ = '15-Jul-2009'
 __version__ = 2022
 
-SnapX = SnapY = CurrX = CurrY = ClickX = ClickY = TargetColumn = None
+SnapX = SnapY = ClickX = ClickY = TargetColumn = None
 CarryCount = 0
 DropOk = False
 
@@ -1048,7 +1048,7 @@ class Block(object):
 ###
 
 def WidgetClicked(widget, context):
-    global SnapX, SnapY, CurrX, CurrY, ClickX, ClickY, TargetColumn
+    global SnapX, SnapY, ClickX, ClickY, TargetColumn
 
     alloc = widget.allocation
     SnapX = CurrX = alloc.x
@@ -1075,19 +1075,14 @@ def SetTargetColumn(widget):
     return target_obj
 
 def MoveWidget(widget, context):
-    global CurrX, CurrY, DropOk
+    global DropOk
 
     blk = widget.block
 
     # in calculating offset, take into account position of mouse click
     # within the widget: (ClickX, ClickY)
-    offX = int(context.x - ClickX)
-    offY = int(context.y - ClickY)
-    #DbgPrint("offset: %d,%d" % (offX, offY))
-    widget.show()
-    widget.parent.move(widget, CurrX+offX, CurrY+offY)
-    CurrX += offX
-    CurrY += offY
+    parent_x, parent_y = widget.translate_coordinates(widget.parent, context.x, context.y)
+    widget.parent.move(widget, parent_x - ClickX, parent_y - ClickY)
 
     if InTargetColumn(widget):
         if Mode == P.ADD_MODE:
@@ -1109,7 +1104,7 @@ def MoveWidget(widget, context):
 
 def MouseUp(widget, context):
 
-    global CurrX, CurrY, DropOk
+    global DropOk
 
     if Mode == P.ADD_MODE:
         MouseUp_Add(widget)
