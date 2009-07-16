@@ -1057,7 +1057,7 @@ def WidgetClicked(widget, context):
     ClickY = context.y
 
     # raise widget to top of stack
-    # ?? how to do this?
+    widget.window.raise_()
 
     # set the corresponding answer column as the drag-drop target
     TargetColumn = SetTargetColumn(widget)
