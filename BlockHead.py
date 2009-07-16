@@ -983,6 +983,7 @@ class Block(object):
 
         # cross-link draggable gtk.EventBox widget and Python Block object
         ebox.block = self
+        ebox.set_double_buffered(False)
         self.draggable_widget = ebox
         # put the image in upper left corner, but make it invisible
         Bpnl.canv.put(self.draggable_widget, 0, 0)
