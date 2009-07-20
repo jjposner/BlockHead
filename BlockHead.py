@@ -23,7 +23,7 @@ with number base <= 10
 """
 
 __date__ = '20-Jul-2009'
-__version__ = 2037
+__version__ = 2038
 
 import pygtk
 pygtk.require('2.0')
