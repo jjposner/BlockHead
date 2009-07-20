@@ -23,7 +23,7 @@ with number base <= 10
 """
 
 __date__ = '20-Jul-2009'
-__version__ = 2034
+__version__ = 2037
 
 import pygtk
 pygtk.require('2.0')
@@ -44,10 +44,10 @@ class P():
     # debug flag
     DEBUG = False
 
-    # show texts?
+    # show help button and help window?
     HELP_ENABLE = True
 
-    # number of column
+    # number of columns
     COL_COUNT = 3
 
     # number base
@@ -77,7 +77,7 @@ class P():
     # distance between carry/borrow arrow and digit
     ANSR_OFFSET = ARROW_OFFSET[1] + 25
     # height adjustment for control panel, to ensure display of carry/borrow blocks
-    WINDOW_HGT_ADJ = 90
+    WINDOW_HGT_ADJ = 100
 
     # operations,  modes
     ADD_MODE, SUBTRACT_MODE, CARRY, BORROW = range(4)
@@ -161,7 +161,7 @@ Click the "-" operator between the numbers to change it to "+".
 
         # buffer
         self.tbuf = gtk.TextBuffer()
-        
+
         # view
         tv = gtk.TextView(self.tbuf)
         tv.modify_base(gtk.STATE_NORMAL, tv.get_colormap().alloc_color(self.BG_COLOR))
@@ -174,7 +174,7 @@ Click the "-" operator between the numbers to change it to "+".
         # format tags
         self.heading_tag = self.tbuf.create_tag(None, font=self.FONT_STRING, foreground=self.HEAD_COLOR)
         self.text_tag = self.tbuf.create_tag(None, font=self.FONT_STRING)
-        
+
     def Update(self):
         """
         get rid of old text, display new text
@@ -186,20 +186,20 @@ Click the "-" operator between the numbers to change it to "+".
         end = self.tbuf.get_end_iter()
         # heading is first text line
         end_of_hd = self.tbuf.get_iter_at_offset(help_text.index("\n"))
-        
+
         self.tbuf.apply_tag(self.heading_tag, start, end_of_hd)
         self.tbuf.apply_tag(self.text_tag, end_of_hd, end)
-        
+
         # show help, but main window always gets focus back
         self.show_all()
         mainwin.present()
 
     def Cleanup(self):
         """
-        remove help window        
+        remove help window
         """
         global HelpWin
-        
+
         self.destroy()
         HelpWin = None
 
@@ -238,7 +238,7 @@ class AnswerLabel(gtk.EventBox):
     def set_sensitive(self, arg):
         """
         like gtk.Widget.set_sensitive()
-        
+
         enables AnswerLabel to be process in a list of gtk.Entry objects
         """
         pass
@@ -280,7 +280,7 @@ class CtrlPanel(gtk.Frame):
 
         self.entries[self.ANS].child.set_width_chars(P.COL_COUNT+1)
         self.entries[self.ANS].child.set_alignment(0.5, 0.5)
-        
+
         # operator button (toggles "+" and "-")
         self.opbtn = gtk.Button()
         self.opbtn.connect("clicked", self.ChangeSign)
@@ -300,10 +300,13 @@ class CtrlPanel(gtk.Frame):
         self.ctrlbtns[self.DRAW].connect("clicked", self.DrawBlocksCmd)
         self.ctrlbtns[self.NEW] = gtk.Button("New")
         self.ctrlbtns[self.NEW].connect("clicked", self.NewCmd)
-        self.ctrlbtns[self.HELP] = gtk.Button("Help")
-        self.ctrlbtns[self.HELP].connect("clicked", self.HelpCmd)
         self.ctrlbtns[self.EXIT] = gtk.Button("Exit")
         self.ctrlbtns[self.EXIT].connect("clicked", gtk.main_quit)
+        if P.HELP_ENABLE:
+            self.ctrlbtns[self.HELP] = gtk.Button("Help")
+            self.ctrlbtns[self.HELP].connect("clicked", self.HelpCmd)
+        else:
+            del self.ctrlbtns[self.HELP]
 
         # font settings
         for wgt in (self.entries + self.entry_labels):
@@ -321,7 +324,7 @@ class CtrlPanel(gtk.Frame):
             self.cols.append(gtk.VBox())
 
         # process the "real" columns
-        
+
         self.cols[COL_1].pack_start(self.entries[self.N1])
         # fixed-width spacer prevents jitter when switching ADD/SUB modes
         fx1 = gtk.Fixed()
@@ -454,8 +457,8 @@ class CtrlPanel(gtk.Frame):
                 obj.destroy()
             except Exception, exc_data: # ?? what kinds of exceptions can be raised?
                 print "exception in NewCmd():", exc_data
-                pass        
-        
+                pass
+
         # reinit entry fields, reset focus
         for ent in self.entries:
             ent.set_text("")
@@ -787,14 +790,14 @@ class Column():
                self.y - (blk.value * P.UNIT_HGT) - (total * P.UNIT_HGT))
 
             #blk.drag_wgt.show()
-            
+
             # update column total
             total += blk.value
 
         # maybe: carry arrow
         if self.carryarrow:
             self.carryarrow.show_all()
-            
+
         # convert total value to string, using P.BASE, and display it
 
         ## single digit
@@ -987,7 +990,7 @@ class Block(object):
         ebox.block = self
         ebox.set_double_buffered(False)
         self.drag_wgt = ebox
-        
+
         # put the image in upper left corner, but make it invisible
         Bpnl.canv.put(self.drag_wgt, 0, 0)
         self.drag_wgt.hide_all()
@@ -1278,7 +1281,7 @@ def DrawBorrowButtons():
     # "-1" because largest column cannot be the "to" of a borrow operation
     for idx in range(P.COL_COUNT-1):
         srccol = NumA.columns[idx+1]
-        destcol = NumA.columns[idx]        
+        destcol = NumA.columns[idx]
 
         # as appropriate, create borrow image and set binding
         if destcol.Total() <  Num2.columns[idx].Total() and not srccol.borrowarrow:
@@ -1409,7 +1412,6 @@ def LoadImages():
         P.CARRY: gtk.gdk.pixbuf_new_from_file(r'left_arrow.png'),
         P.BORROW: gtk.gdk.pixbuf_new_from_file(r'right_arrow.png'),
     }
-
     return pix
 
 ###
