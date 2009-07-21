@@ -22,7 +22,7 @@ add or subtract two multiple-digit numbers,
 with number base <= 10
 """
 
-__date__ = '20-Jul-2009'
+__date__ = '21-Jul-2009'
 __version__ = 2038
 
 import pygtk
@@ -54,13 +54,15 @@ class P():
     BASE = 10
     VALID_DIGITS = map(str, range(BASE))
 
-    ### animation times
+    # animation times
     IN_COL = 0.10
     COL_TO_COL = 0.20
     SHRINK_EXPAND_DELAY = 0.07
     PAUSE = 0.25
 
+    ###
     ### sizes
+    ###
 
     # block width
     BLOCK_WID = 40
@@ -88,7 +90,10 @@ class P():
     EQUAL_SIGN_FONT = pango.FontDescription("%s 24" % FONTNAME)
     HELP_FONT = pango.FontDescription("%s 11" % FONTNAME)
 
-    # colors
+    ###
+    ### colors
+    ###
+    
     ANSW_COLOR = '#00CCFF'
     CAN_DROP_COLOR = 0x00FF0000
     CANNOT_DROP_COLOR = 0x22222200
@@ -98,12 +103,12 @@ class P():
                         0xA6E2F400, 0xFFD5D700, 0xD3FFD300, 0xFEEDB100,
                         ]
 
-    assert(len(COLUMN_PIXEL_COLORS) >= COL_COUNT)
-
     # get rid of unneeded column colors
+    assert(len(COLUMN_PIXEL_COLORS) >= COL_COUNT)
     del COLUMN_PIXEL_COLORS[COL_COUNT:]
+    
     # gray column for final carry
-    COLUMN_PIXEL_COLORS.append(0xe8e8e800)
+    COLUMN_PIXEL_COLORS.append(0xE8E8E800)
 
     BLOCK_PIXEL_COLORS = [0x3280EA00, 0xE35BA000, 0x6FD48A00, 0xF2BC0200, 0xCB00FF00, 0x99667600,
                           0x3280EA00, 0xE35BA000, 0x6FD48A00, 0xF2BC0200,
@@ -111,20 +116,18 @@ class P():
 
     # get rid of unneeded block colors
     del BLOCK_PIXEL_COLORS[COL_COUNT:]
-    # add gray color for block created by final carry
+    # gray color for block created by final carry
     BLOCK_PIXEL_COLORS.append(0xC0C0C000)
 
     # texts and strings
+    # widths set to None, will be populated by SetDisplayStringWidths()
     DISPLAY_STR = {
-        'first': "First Number",
-        'second': "Second Number",
-        'larger': "Larger Number",
-        'smaller': "Smaller Number",
-        'answer': "Answer",
+        'first': ["First Number", None],
+        'second': ["Second Number", None],
+        'larger': ["Larger Number", None],
+        'smaller': ["Smaller Number", None],
+        'answer': ["Answer", None],
     }
-
-    # dict to be populated by SetDisplayStringWidths()
-    DISPLAY_STR_WID = {}
 
 class HelpWindow(gtk.Window):
     """
@@ -266,12 +269,17 @@ class CtrlPanel(gtk.Frame):
 
     def __init__(self, wid, hgt):
         gtk.Frame.__init__(self)
+        
+        ###
+        ### create control widgets
+        ###
 
         # entry fields and labels (includes answer field, too)
         self.entries = [gtk.Entry(max=P.COL_COUNT), gtk.Entry(max=P.COL_COUNT), AnswerLabel()]
-        self.entry_labels = [gtk.Label(P.DISPLAY_STR["first"]),
-                             gtk.Label(P.DISPLAY_STR["second"]),
-                             gtk.Label(P.DISPLAY_STR["answer"])]
+        self.entry_labels = [gtk.Label(P.DISPLAY_STR["first"][0]),
+                             gtk.Label(P.DISPLAY_STR["second"][0]),
+                             gtk.Label(P.DISPLAY_STR["answer"][0]),
+                             ]
 
         for i in self.N1, self.N2:
             self.entries[i].set_width_chars(P.COL_COUNT)
@@ -291,8 +299,6 @@ class CtrlPanel(gtk.Frame):
         equ = gtk.Label("=")
         self.algn_equ = gtk.Alignment(0.5, 0.5)
         self.algn_equ.add(equ)
-
-        ### answer field and label
 
         # control buttons
         self.ctrlbtns = [None, None, None, None]
@@ -316,19 +322,28 @@ class CtrlPanel(gtk.Frame):
             wgt.child.modify_font(P.FONT)
         equ.modify_font(P.EQUAL_SIGN_FONT)
 
-        # layout -- lots of columns, each with a VBox
-        SA, COL_1, SB, COL_OP, SC, COL_2, SD, COL_EQ, SE, COL_ANS, SF = range(11)
+        ###
+        ### lay out widgets
+        ###
 
+        # top level: HBox with lots of columns, each one a VBox
+        SA, COL_1, SB, COL_OP, SC, COL_2, SD, COL_EQ, SE, COL_ANS, SF = range(11)
+        
+        overall_box = gtk.HBox()
         self.cols = []
         for i in range(11):
-            self.cols.append(gtk.VBox())
+            onecol = gtk.VBox()
+            self.cols.append(onecol)
+            overall_box.pack_start(onecol)
 
-        # process the "real" columns
-
+        ##
+        ## process the "real" columns
+        ##
+        
         self.cols[COL_1].pack_start(self.entries[self.N1])
         # fixed-width spacer prevents jitter when switching ADD/SUB modes
         fx1 = gtk.Fixed()
-        fx1.set_size_request(max(P.DISPLAY_STR_WID['first'], P.DISPLAY_STR_WID['larger']), 5)
+        fx1.set_size_request(max(P.DISPLAY_STR['first'][1], P.DISPLAY_STR['larger'][1]), 5)
         self.cols[COL_1].pack_start(fx1)
         self.cols[COL_1].pack_start(self.entry_labels[self.N1])
 
@@ -337,7 +352,7 @@ class CtrlPanel(gtk.Frame):
         self.cols[COL_2].pack_start(self.entries[self.N2])
         # fixed-width spacer prevents jitter when switched ADD/SUB modes
         fx2 = gtk.Fixed()
-        fx2.set_size_request(max(P.DISPLAY_STR_WID['second'], P.DISPLAY_STR_WID['smaller']), 5)
+        fx2.set_size_request(max(P.DISPLAY_STR['second'][1], P.DISPLAY_STR['smaller'][1]), 5)
         self.cols[COL_2].pack_start(fx2)
         self.cols[COL_2].pack_start(self.entry_labels[self.N2])
 
@@ -346,20 +361,33 @@ class CtrlPanel(gtk.Frame):
         self.cols[COL_ANS].pack_start(self.entries[self.ANS])
         self.cols[COL_ANS].pack_start(self.entry_labels[self.ANS])
 
-        # process the spacer columns
-        self.SetSpacerWidths()
+        ##
+        ## process the spacer columns
+        ##
+        
+        # use gtk.Fixed objects to set widths
+        self.spacer_wgts = {}
+        for key in [SA, SB, SC, SD, SE, SF]:
+            self.spacer_wgts[key] = gtk.Fixed()
+            self.cols[key].pack_start(self.spacer_wgts[key])
 
-        # pack all the columns into a horizontal box
-        overall_box = gtk.HBox()
-        for col in self.cols:
-            overall_box.pack_start(col)
+        # use largest width of enclosed "real" column to determine proper width
+        for i in [SA, SB]:
+            self.spacer_wgts[i].set_size_request(SpacerWidth(('first', 'larger')), 13)
+        for i in [SC, SD]:
+            self.spacer_wgts[i].set_size_request(SpacerWidth(('second', 'smaller')), 13)
+
+        # to left of answer: flag indicates need for extra space, for carry column
+        self.spacer_wgts[SE].set_size_request(SpacerWidth(('answer',), True), 13)
+        # to right of answer: not much space needed, can overlap buttons at right
+        self.spacer_wgts[SF].set_size_request(25, 13)
 
         # box of buttons goes into the horizontal box flush-right, with padding
         ctrlbtns_box = gtk.HBox(spacing=2)
         for btn in self.ctrlbtns:
             ctrlbtns_box.pack_start(btn)
 
-        ## gtk.Alignment keeps buttons from filling vertical space
+        # ... gtk.Alignment keeps buttons from filling vertical space
         buttons_box_algn = gtk.Alignment(0.5, 0.5)
         buttons_box_algn.add(ctrlbtns_box)
         overall_box.pack_end(buttons_box_algn, padding=5)
@@ -367,55 +395,6 @@ class CtrlPanel(gtk.Frame):
         # place horizontal box into control panel frame
         self.add(overall_box)
         self.show_all()
-
-    def SetSpacerWidths(self):
-        """
-        determine the widths of strings to be displayed in control panel
-        set control panel elements, so that no jitter occurs when toggling
-        ADD/SUB mode
-        """
-        # copy these settings from CtrlPanel.__init__()
-        SA, COL_1, SB, COL_OP, SC, COL_2, SD, COL_EQ, SE, COL_ANS, SF = range(11)
-
-        def _spc_width(label_width, answ_col_flag=False):
-            """
-            determine width for spacer Frame for a specified label-width
-            flag indicates this is answer column (needs wider spacer in ADD mode, for carry column)
-            """
-            # width of column set; extra answer column for carry in ADD mode
-            col_set_width = (P.COL_COUNT + 1) * P.COL_WID if answ_col_flag else P.COL_COUNT * P.COL_WID
-            half_col = P.COL_WID // 2
-
-            # width depends on whether label is wider than column set
-            return (half_col
-                    if label_width > col_set_width else
-                    (col_set_width - label_width) // 2 + half_col)
-
-
-        # use longest labels to calculate space widths
-        n1_wid = max(P.DISPLAY_STR_WID['first'], P.DISPLAY_STR_WID['larger'])
-        n2_wid = max(P.DISPLAY_STR_WID['second'], P.DISPLAY_STR_WID['smaller'])
-        nA_wid = P.DISPLAY_STR_WID['answer']
-
-        # create empty labels
-        self.spacer_labels = {}
-        for key in [SA, SB, SC, SD, SE, SF]:
-            #lab = gtk.Label("#%d" % key) # for debugging the spacing
-            lab = gtk.Label("")
-            lab.set_alignment(0.5, 0.5)
-            self.spacer_labels[key] = lab
-            self.cols[key].pack_start(lab)
-
-        # use set_size_request() to set widths of the empty labels
-        for i in [SA, SB]:
-            self.spacer_labels[i].set_size_request(_spc_width(n1_wid), 13)
-        for i in [SC, SD]:
-            self.spacer_labels[i].set_size_request(_spc_width(n2_wid), 13)
-        self.spacer_labels[SE].set_size_request(_spc_width(nA_wid, True), 13)
-        # we don't need much width to right of Answer column, can overlap buttons at right
-        self.spacer_labels[SF].set_size_request(50, 13)
-
-        DbgPrint("spacer widths: %d, %d, %d, %d" % (_spc_width(n1_wid), _spc_width(n2_wid), _spc_width(nA_wid), 50))
 
     def ChangeSign(self, btn):
         """
@@ -1266,11 +1245,11 @@ def InitializeMode():
     """
     # adjust labels
     if Mode == P.ADD_MODE:
-        Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['first'])
-        Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['second'])
+        Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['first'][0])
+        Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['second'][0])
     else:
-        Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['larger'])
-        Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['smaller'])
+        Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['larger'][0])
+        Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['smaller'][0])
 
     Cpnl.opbtn.set_property("image", Pix[Mode])
 
@@ -1398,8 +1377,8 @@ def SetDisplayStringWidths():
 
     # store string widths
     for k in P.DISPLAY_STR.keys():
-        lay.set_text(P.DISPLAY_STR[k])
-        P.DISPLAY_STR_WID[k] = lay.get_pixel_size()[0]
+        lay.set_text(P.DISPLAY_STR[k][0])
+        P.DISPLAY_STR[k][1] = lay.get_pixel_size()[0]
 
 def LoadImages():
     """
@@ -1413,6 +1392,25 @@ def LoadImages():
         P.BORROW: gtk.gdk.pixbuf_new_from_file(r'right_arrow.png'),
     }
     return pix
+
+def SpacerWidth(label_keys, answ_col_flag=False):
+    """
+    determine width for spacer Frame for a specified label-width
+    flag indicates this is answer column (needs wider spacer in ADD mode, for carry column)
+    """
+    # width of column set; extra answer column for carry in ADD mode
+    col_set_width = ((P.COL_COUNT + 1) * P.COL_WID
+                     if answ_col_flag else
+                     P.COL_COUNT * P.COL_WID)
+    half_col = P.COL_WID // 2
+
+    # calculate max width of label that appears in this column
+    max_label_wid = max(P.DISPLAY_STR[key][1] for key in label_keys)
+    
+    # spacer width depends on whether label width exceeds column-set width
+    return (half_col
+            if max_label_wid > col_set_width else
+            (col_set_width - max_label_wid) // 2 + half_col)
 
 ###
 ### main routine
