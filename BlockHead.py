@@ -23,7 +23,7 @@ with number base <= 10
 """
 
 __date__ = '21-Jul-2009'
-__version__ = 2038
+__version__ = 2039
 
 import pygtk
 pygtk.require('2.0')
@@ -995,7 +995,7 @@ class Block(object):
         """
         # set the target vertical scaling factor
         start = 1.0
-        end = 0.1 if mode == P.ADD_MODE else 10.0
+        end = 1.0/P.BASE if mode == P.ADD_MODE else 1.0*P.BASE
 
         mysize = (P.BLOCK_WID, self.value * P.UNIT_HGT)
         img = gtk.Image()
