@@ -29,8 +29,8 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import pango
-#from sugar.activity import activity
-#import logging
+from sugar.activity import activity
+import logging
 import os
 import sys
 from time import sleep
@@ -67,7 +67,7 @@ class P():
     ###
 
     # block width
-    BLOCK_WID = 28
+    BLOCK_WID = 26
     # padding between block and column edge
     BLOCK_PAD = 8
     # height of one unit
@@ -88,9 +88,9 @@ class P():
 
     # fonts
     FONTNAME = "Sans Bold"
-    FONT = pango.FontDescription("%s 10" % FONTNAME)
-    EQUAL_SIGN_FONT = pango.FontDescription("%s 18" % FONTNAME)
-    HELP_FONT = pango.FontDescription("%s 10" % FONTNAME)
+    FONT = pango.FontDescription("%s 12" % FONTNAME)
+    EQUAL_SIGN_FONT = pango.FontDescription("%s 24" % FONTNAME)
+    HELP_FONT = pango.FontDescription("%s 11" % FONTNAME)
 
     ###
     ### colors
@@ -1418,9 +1418,9 @@ def SpacerWidth(label_keys, answ_col_flag=False):
 ### main routine
 ###
 
-class BlockHeadActivity(): #sugar activity.Activity):
+class BlockHeadActivity(activity.Activity):
     
-    def __init__(self): #sugar, handle):
+    def __init__(self, handle):
         global Mode, HelpWin, MyDrawable, Pix, MainWin, Bpnl, Cpnl
         
         Mode = P.ADD_MODE
@@ -1458,14 +1458,15 @@ class BlockHeadActivity(): #sugar activity.Activity):
         Cpnl.NewCmd(None)
         vb.pack_start(Cpnl, expand=False, fill=False)
     
+        toolbox = activity.ActivityToolbox(self)
+        self.set_toolbox(toolbox)
+        toolbox.show()
+        
+        self.set_canvas(MainWin)
+
         # go
         MainWin.show_all()
         
-        # sugar toolbox = activity.ActivityToolbox(self)
-        # sugar self.set_toolbox(toolbox)
-        # sugar toolbox.show()
-        
-        # sugar self.set_canvas(MainWin)
         gtk.main()
         
         # sugar sys.exit(0)
