@@ -22,15 +22,15 @@ add or subtract two multiple-digit numbers,
 with number base <= 10
 """
 
-__date__ = '2-Aug-2009'
-__version__ = 2041
+__date__ = '5-Aug-2009'
+__version__ = 2044
 
 import pygtk
 pygtk.require('2.0')
 import gtk
 import pango
-from sugar.activity import activity
-import logging
+#from sugar.activity import activity
+#import logging
 import os
 import sys
 from time import sleep
@@ -47,7 +47,10 @@ class P():
     DEBUG = False
 
     # show help button and help window?
-    HELP_ENABLE = True
+    HELP_ENABLE = False
+
+    # show exit button?
+    EXIT_ENABLE = False
 
     # number of columns
     COL_COUNT = 3
@@ -67,9 +70,9 @@ class P():
     ###
 
     # block width
-    BLOCK_WID = 26
+    BLOCK_WID = 30
     # padding between block and column edge
-    BLOCK_PAD = 8
+    BLOCK_PAD = 10
     # height of one unit
     UNIT_HGT = BLOCK_WID
     # column width (make the columns contiguous)
@@ -308,8 +311,11 @@ class CtrlPanel(gtk.Frame):
         self.ctrlbtns[self.DRAW].connect("clicked", self.DrawBlocksCmd)
         self.ctrlbtns[self.NEW] = gtk.Button("New")
         self.ctrlbtns[self.NEW].connect("clicked", self.NewCmd)
-        self.ctrlbtns[self.EXIT] = gtk.Button("Exit")
-        self.ctrlbtns[self.EXIT].connect("clicked", gtk.main_quit)
+        if P.EXIT_ENABLE:
+            self.ctrlbtns[self.EXIT] = gtk.Button("Exit")
+            self.ctrlbtns[self.EXIT].connect("clicked", gtk.main_quit)
+        else:
+            del self.ctrlbtns[self.EXIT]
         if P.HELP_ENABLE:
             self.ctrlbtns[self.HELP] = gtk.Button("Help")
             self.ctrlbtns[self.HELP].connect("clicked", self.HelpCmd)
@@ -506,13 +512,20 @@ class CtrlPanel(gtk.Frame):
         if event:
             # remove invalid characters
             char = event.string
-            if char and char not in P.VALID_DIGITS:
+            if (char
+                and
+                char not in P.VALID_DIGITS
+                and
+                # is the offending character still there?
+                # it might have been deleted already by field's max-length property
+                char in fld.get_text()
+                ):
                 cur = fld.get_position()
                 fld.delete_text(cur-1, cur)
 
         # input values are STRINGs not INTs, to support non-decimal arithmetic
         entry_strings = [None, None]
-        for i in range(2):
+        for i in [0,1]:
             entry_strings[i] = self.entries[i].get_text()
 
         # enable Draw button if entries are valid
@@ -1386,12 +1399,108 @@ def LoadImages():
     """
     create images/pixbufs from XPM data
     """
-    # operator images
+    LEFT_ARROW = [
+        "30 12 2 1",
+        "  c black",
+        ". c None",
+        "..    ........................",
+        "..      ......................",
+        "..        .................   ",
+        ".        .................    ",
+        ".       .................     ",
+        "        .................    .",
+        "  ..    .................    .",
+        ".....   .............  .......",
+        "..........     ....     ......",
+        ".........       ..      ......",
+        "..........      ..     .......",
+        "............   ....  ........."
+    ]
+
+    RIGHT_ARROW = [
+        "30 12 2 1",
+        "  c black",
+        ". c None",
+        "........................    ..",
+        "......................      ..",
+        "   .................        ..",
+        "    .................        .",
+        "     .................       .",
+        ".    .................        ",
+        ".    .................    ..  ",
+        ".......  .............   .....",
+        "......     ....     ..........",
+        "......      ..       .........",
+        ".......     ..      ..........",
+        ".........  ....   ............"        
+    ]
+
+    PLUS = [
+        "26 20 2 1",
+        "  c black",
+        ". c None",
+        "..........................",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "....                  ....",
+        "....                  ....",
+        "....                  ....",
+        "....                  ....",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        "...........    ...........",
+        ".........................."
+    ]
+
+    MINUS = [
+        "26 20 2 1",
+        "  c black",
+        ". c None",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "....                  ....",
+        "....                  ....",
+        "....                  ....",
+        "....                  ....",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        "..........................",
+        ".........................."
+    ]
+    
+    def _image_new_from_xpm_data(datalist):
+        """
+        create image using XPM data list
+        (missing from standard GTK/GDK library)
+        """
+        pbuf = gtk.gdk.pixbuf_new_from_xpm_data(datalist)
+        return gtk.image_new_from_pixbuf(pbuf)
+
+    # operator images (Image and Pixbuf objects)
     pix = {
-        P.ADD_MODE: gtk.image_new_from_file(r'plus.png'),
-        P.SUBTRACT_MODE: gtk.image_new_from_file(r'minus.png'),
-        P.CARRY: gtk.gdk.pixbuf_new_from_file(r'left_arrow.png'),
-        P.BORROW: gtk.gdk.pixbuf_new_from_file(r'right_arrow.png'),
+        P.ADD_MODE:      _image_new_from_xpm_data(PLUS),
+        P.SUBTRACT_MODE: _image_new_from_xpm_data(MINUS),
+        P.CARRY:         gtk.gdk.pixbuf_new_from_xpm_data(LEFT_ARROW),
+        P.BORROW:        gtk.gdk.pixbuf_new_from_xpm_data(RIGHT_ARROW),
     }
     return pix
 
@@ -1418,9 +1527,9 @@ def SpacerWidth(label_keys, answ_col_flag=False):
 ### main routine
 ###
 
-class BlockHeadActivity(activity.Activity):
+class BlockHeadActivity(): #sugar activity.Activity):
     
-    def __init__(self, handle):
+    def __init__(self): #sugar, handle):
         global Mode, HelpWin, MyDrawable, Pix, MainWin, Bpnl, Cpnl
         
         Mode = P.ADD_MODE
@@ -1458,15 +1567,14 @@ class BlockHeadActivity(activity.Activity):
         Cpnl.NewCmd(None)
         vb.pack_start(Cpnl, expand=False, fill=False)
     
-        toolbox = activity.ActivityToolbox(self)
-        self.set_toolbox(toolbox)
-        toolbox.show()
-        
-        self.set_canvas(MainWin)
-
         # go
         MainWin.show_all()
         
+        # sugar toolbox = activity.ActivityToolbox(self)
+        # sugar self.set_toolbox(toolbox)
+        # sugar toolbox.show()
+        
+        # sugar self.set_canvas(MainWin)
         gtk.main()
         
         # sugar sys.exit(0)
@@ -1474,4 +1582,3 @@ class BlockHeadActivity(activity.Activity):
 if __name__ == "__main__":
     BlockHeadActivity()
     sys.exit(0)
-
