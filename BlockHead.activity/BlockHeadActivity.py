@@ -22,8 +22,8 @@ add or subtract two multiple-digit numbers,
 with number base <= 10
 """
 
-__date__ = '12-Aug-2009'
-__version__ = 2055
+__date__ = '16-Aug-2009'
+__version__ = 2068
 
 SUGAR_ACTIVITY = True
 
@@ -73,9 +73,9 @@ class P():
     ###
 
     # block width
-    BLOCK_WID = 30
+    BLOCK_WID = 24
     # padding between block and column edge
-    BLOCK_PAD = 10
+    BLOCK_PAD = 12
     # height of one unit
     UNIT_HGT = BLOCK_WID
     # column width (make the columns contiguous)
@@ -103,6 +103,7 @@ class P():
     ###
     
     ANSW_COLOR = '#00CCFF'
+    CANV_COLOR = '#E0E0E8'
     CAN_DROP_COLOR = 0x00FF0000
     CANNOT_DROP_COLOR = 0x22222200
 
@@ -275,7 +276,7 @@ class CtrlPanel(gtk.Frame):
     # offsets into entries/labels lists
     N1, N2, ANS = range(3)
 
-    def __init__(self, wid, hgt):
+    def __init__(self):
         gtk.Frame.__init__(self)
         
         ###
@@ -482,21 +483,33 @@ class CtrlPanel(gtk.Frame):
         # base y-coordinate for columns
         bottomY = 2 * P.COL_HGT
 
-        # get allocations of entry fields and answer field
-        allocs = [ ent.allocation for ent in Cpnl.entries]
+        # get left-edge coordinates of entry fields and answer field,
+        # relative to the control panel
+        entry_posns = [ent.allocation for ent in Cpnl.entries]
+        cpnl_offset = Cpnl.allocation.x
 
         if Mode == P.ADD_MODE:
             # center column block over first input number
-            Num1 = Number("n1", digits[0], allocs[0].x + allocs[0].width // 2, bottomY)
+            Num1 = Number("n1", digits[0],
+                          entry_posns[0].x - cpnl_offset + entry_posns[0].width // 2,
+                          bottomY)
             # center column block over second input number
-            Num2 = Number("n2", digits[1], allocs[1].x + allocs[1].width // 2, bottomY)
+            Num2 = Number("n2", digits[1],
+                          entry_posns[1].x - cpnl_offset + entry_posns[1].width // 2,
+                          bottomY)
             # center column block over first answer number
-            NumA = AnswerNumber("nA", None, allocs[2].x + allocs[2].width // 2, bottomY)
+            NumA = AnswerNumber("nA", None,
+                                entry_posns[2].x - cpnl_offset + entry_posns[2].width // 2,
+                                bottomY)
 
         elif Mode == P.SUBTRACT_MODE:
             # Answer in SUB mode is a little higher
-            NumA = AnswerNumber("nA", digits[0], allocs[0].x + allocs[0].width // 2, bottomY - P.ANSR_OFFSET)
-            Num2 = Number("n2", digits[1], allocs[1].x + allocs[1].width // 2, bottomY)
+            NumA = AnswerNumber("nA", digits[0],
+                                entry_posns[0].x - cpnl_offset + entry_posns[0].width // 2,
+                                bottomY - P.ANSR_OFFSET)
+            Num2 = Number("n2", digits[1],
+                          entry_posns[1].x - cpnl_offset + entry_posns[1].width // 2,
+                          bottomY)
 
             # enable borrow buttons (maybe)
             DrawBorrowButtons()
@@ -694,10 +707,7 @@ class Column():
 
     def Draw(self):
         """
-        draw a column, starting at lower left corner (x,y)
-        """
-        """
-        Image -> Pixbuf
+        draw a column
         """
         # (width, height) of column
         mysize = (P.COL_WID, P.COL_HGT)
@@ -709,12 +719,9 @@ class Column():
         # color it in
         PixelFill(img, self.color)
 
-        pbuf = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, *mysize)
-        pbuf.fill(self.color)
-        img.set_from_pixbuf(pbuf)
-
         # place column on canvas (gtk.Fixed)
-        Bpnl.canv.put(img, *self.UpperLeft())
+        x, y = self.UpperLeft()
+        Bpnl.canv.put(img, x, y)
 
         # cross-register gtk.Image and app's Column object
         self.image = img
@@ -1059,8 +1066,8 @@ def WidgetClicked(widget, context):
     # global (SnapX, SnapY) is location of widget when first clicked
     SnapX = alloc.x
     SnapY = alloc.y
-    ClickX = context.x
-    ClickY = context.y
+    ClickX = int(context.x)
+    ClickY = int(context.y)
 
     # raise widget to top of stack
     widget.window.raise_()
@@ -1068,8 +1075,8 @@ def WidgetClicked(widget, context):
     # set the corresponding answer column as the drag-drop target
     TargetColumn = SetTargetColumn(widget)
 
-    DbgPrint("widget allocation: (%d,%d) width=%d, height=%d" % (SnapX, SnapY, alloc.width, alloc.height))
-    DbgPrint("offset within widget: (%d,%d)" % (ClickX, ClickY))
+    #DbgPrint("widget allocation: (%d,%d) width=%d, height=%d" % (SnapX, SnapY, alloc.width, alloc.height))
+    #DbgPrint("offset within widget: (%d,%d)" % (ClickX, ClickY))
 
 def SetTargetColumn(widget):
     """
@@ -1083,19 +1090,19 @@ def SetTargetColumn(widget):
 def MoveWidget(widget, context):
     global DropOk
 
-    blk = widget.block
-
-    # in calculating offset, take into account position of mouse click
-    # within the widget: (ClickX, ClickY)
+    # where is mouse pointer now, in canvas coordinates?
     parentX, parentY = widget.translate_coordinates(Bpnl.canv, int(context.x), int(context.y))
-    Bpnl.canv.move(widget, parentX - int(ClickX), parentY - int(ClickY))
+    
+    # move Block widget, taking into account position of mouse click (ClickX, ClickY)
+    # within the Block
+    Bpnl.canv.move(widget, parentX - ClickX, parentY - ClickY)
 
     if InTargetColumn(widget):
         if Mode == P.ADD_MODE:
             PixelFill(TargetColumn.image, P.CAN_DROP_COLOR)
             DropOk = True
         elif Mode == P.SUBTRACT_MODE:
-            if blk.value <= TargetColumn.Total():
+            if widget.block.value <= TargetColumn.Total():
                 # can subtract now, without borrowing
                 PixelFill(TargetColumn.image, P.CAN_DROP_COLOR)
                 DropOk = True
@@ -1559,24 +1566,34 @@ class BlockHeadActivity(mytype):
             MainWin = gtk.Frame()
             MainWin.set_shadow_type(gtk.SHADOW_NONE)
         else:
-            MainWin = gtk.Window(gtk.WINDOW_TOPLEVEL)
-            MainWin.set_title("BlockHead")
+            MainWin = gtk.Window()
+            MainWin.set_title("BlockHead -- Addition/Subtraction Calculator")
+            #MainWin.set_size_request(1300, 900)
             MainWin.set_resizable(False)
             MainWin.set_position(gtk.WIN_POS_CENTER)
             MainWin.connect('destroy', lambda _: gtk.main_quit())
      
         # vertical box holds block canvas (BlockPanel) and control panel (CtrlPanel)
+        #
+        # NOTE: calculations of column and block locations use widget "allocation"
+        # attributes, which are window-global coordinates. Thus, Bpnl and Cpnl should
+        # both be left-aligned with overall window, MainWin.
         vb = gtk.VBox()
-        MainWin.add(vb)
+        algn = gtk.Alignment(0.5, 0.5)
+        algn.add(vb)
+        MainWin.add(algn)
     
         # canvas where columns/blocks appear, at top
-        Bpnl = BlockPanel(111, 2 * P.BASE * P.UNIT_HGT + P.WINDOW_HGT_ADJ)
+        Bpnl = BlockPanel(111, 2*P.BASE*P.UNIT_HGT + P.WINDOW_HGT_ADJ)
+        # ?? why is next statement necessary for correct block-position calculations?
+        Bpnl.canv.set_has_window(True)
+        SetBgColor(Bpnl.canv, P.CANV_COLOR)
         vb.pack_start(Bpnl.canv, expand=True, fill=True)
     
         # control panel, at bottom
-        Cpnl = CtrlPanel(111, 75)
+        Cpnl = CtrlPanel()
         Cpnl.NewCmd(None)
-        vb.pack_start(Cpnl, expand=False, fill=False)
+        vb.pack_start(Cpnl, expand=True, fill=True)
     
         # go
         MainWin.show_all()

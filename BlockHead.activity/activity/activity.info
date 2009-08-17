@@ -1,0 +1,8 @@
+[Activity]
+name = BlockHead
+bundle_id = org.laptop.BlockHeadActivity
+class = BlockHeadActivity.BlockHeadActivity
+icon = activity-blockhead
+activity_version = 23
+host_version = 1
+show_launcher = yes
