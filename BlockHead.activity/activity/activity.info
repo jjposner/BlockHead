@@ -3,6 +3,6 @@ name = BlockHead
 bundle_id = org.laptop.BlockHeadActivity
 class = BlockHeadActivity.BlockHeadActivity
 icon = activity-blockhead
-activity_version = 23
+activity_version = 1
 host_version = 1
 show_launcher = yes

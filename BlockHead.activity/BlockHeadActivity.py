@@ -22,10 +22,12 @@ add or subtract two multiple-digit numbers,
 with number base <= 10
 """
 
-__date__ = '16-Aug-2009'
-__version__ = 2068
+__date__ = '26-Aug-2009'
+__version__ = 2075
 
-SUGAR_ACTIVITY = True
+# set to True to run as an OLPC/Sugar "activity"
+# set to False to run as a standard Python program
+SUGAR_ACTIVITY = False
 
 import pygtk
 pygtk.require('2.0')
@@ -50,7 +52,7 @@ class P():
     DEBUG = False
 
     # show help button and help window?
-    HELP_ENABLE = False
+    HELP_ENABLE = False if SUGAR_ACTIVITY else True
 
     # show exit button?
     EXIT_ENABLE = False if SUGAR_ACTIVITY else True
@@ -82,10 +84,12 @@ class P():
     COL_WID = BLOCK_WID + 2*BLOCK_PAD
     # column height
     COL_HGT = BASE * UNIT_HGT
-    # distance between bottom of column and carry/borrow arrow
+    # offset between bottom of column and carry/borrow arrow
     ARROW_OFFSET = (-10, 10)
     # distance between carry/borrow arrow and digit
-    ANSR_OFFSET = ARROW_OFFSET[1] + 25
+    TOTAL_OFFSET = ARROW_OFFSET[1] + 25
+    # height of total label (text is centered vertically)
+    TOTAL_LABEL_HGT = 30
     # height adjustment for control panel, to ensure display of carry/borrow blocks
     WINDOW_HGT_ADJ = 100
 
@@ -101,9 +105,10 @@ class P():
     ###
     ### colors
     ###
-    
-    ANSW_COLOR = '#00CCFF'
-    CANV_COLOR = '#E0E0E8'
+
+    ANSW_COLOR_STR = '#00CCFF'
+    CANV_COLOR_STR = '#C8C8C8'
+
     CAN_DROP_COLOR = 0x00FF0000
     CANNOT_DROP_COLOR = 0x22222200
 
@@ -115,7 +120,7 @@ class P():
     # get rid of unneeded column colors
     assert(len(COLUMN_PIXEL_COLORS) >= COL_COUNT)
     del COLUMN_PIXEL_COLORS[COL_COUNT:]
-    
+
     # gray column for final carry
     COLUMN_PIXEL_COLORS.append(0xE8E8E800)
 
@@ -144,14 +149,14 @@ class HelpWindow(gtk.Window):
     """
     WID = 470
     HGT = 250
-    FONT_STRING = "Sans Bold 11"
-    BG_COLOR = '#EEEAFA'
-    HEAD_COLOR = 'red'
+    FONT_STR = "Sans Bold 11"
+    BG_COLOR_STR = '#EEEAFA'
+    HEAD_COLOR_STR = 'red'
 
     # help texts
     HELP_ADD = """ADD TWO NUMBERS
 Enter two numbers to be added, then click "Draw Blocks".
-Drag each block that appears to the corresponding (same-color) answer column.
+Drag each block to the corresponding (same-color) answer column at the right.
 If an answer column's total is 10 or more, click the "carry" arrow that appears below the answer column.
 Click the "+" operator between the numbers to change it to "-".
 """
@@ -169,14 +174,14 @@ Click the "-" operator between the numbers to change it to "+".
         self.set_transient_for(MainWin)
         self.connect('destroy', lambda _: self.Cleanup())
         self.set_size_request(self.WID, self.HGT)
-        self.move(10,10)
+        self.set_position(gtk.WIN_POS_CENTER)
 
         # buffer
         self.tbuf = gtk.TextBuffer()
 
         # view
         tv = gtk.TextView(self.tbuf)
-        tv.modify_base(gtk.STATE_NORMAL, tv.get_colormap().alloc_color(self.BG_COLOR))
+        tv.modify_base(gtk.STATE_NORMAL, tv.get_colormap().alloc_color(self.BG_COLOR_STR))
         tv.set_left_margin(10)
         tv.set_pixels_above_lines(10)
         tv.set_wrap_mode(gtk.WRAP_WORD)
@@ -184,8 +189,8 @@ Click the "-" operator between the numbers to change it to "+".
         self.add(tv)
 
         # format tags
-        self.heading_tag = self.tbuf.create_tag(None, font=self.FONT_STRING, foreground=self.HEAD_COLOR)
-        self.text_tag = self.tbuf.create_tag(None, font=self.FONT_STRING)
+        self.heading_tag = self.tbuf.create_tag(None, font=self.FONT_STR, foreground=self.HEAD_COLOR_STR)
+        self.text_tag = self.tbuf.create_tag(None, font=self.FONT_STR)
 
     def Update(self):
         """
@@ -221,6 +226,7 @@ class AnswerLabel(gtk.EventBox):
     """
 
     # standard bg color (in NORMAL state), to make label seem transparent
+    # value is gtk.gdk.Color
     std_bgcolor = tuple(gtk.Fixed().get_style().bg)[gtk.STATE_NORMAL]
 
     def __init__(self):
@@ -245,13 +251,13 @@ class AnswerLabel(gtk.EventBox):
         like gtk.Label.set_text()
         """
         self.child.set_text(textstr)
-        SetBgColor(self, P.ANSW_COLOR)
+        SetBgColor(self, P.ANSW_COLOR_STR)
 
     def set_sensitive(self, arg):
         """
         like gtk.Widget.set_sensitive()
 
-        enables AnswerLabel to be process in a list of gtk.Entry objects
+        enables AnswerLabel to be processed in a list of gtk.Entry objects
         """
         pass
 
@@ -278,7 +284,7 @@ class CtrlPanel(gtk.Frame):
 
     def __init__(self):
         gtk.Frame.__init__(self)
-        
+
         ###
         ### create control widgets
         ###
@@ -339,8 +345,9 @@ class CtrlPanel(gtk.Frame):
         ###
 
         # top level: HBox with lots of columns, each one a VBox
+        # SA, SB, etc. are spacer columns
         SA, COL_1, SB, COL_OP, SC, COL_2, SD, COL_EQ, SE, COL_ANS, SF = range(11)
-        
+
         overall_box = gtk.HBox()
         self.cols = []
         for i in range(11):
@@ -351,7 +358,7 @@ class CtrlPanel(gtk.Frame):
         ##
         ## process the "real" columns
         ##
-        
+
         self.cols[COL_1].pack_start(self.entries[self.N1])
         # fixed-width spacer prevents jitter when switching ADD/SUB modes
         fx1 = gtk.Fixed()
@@ -376,7 +383,7 @@ class CtrlPanel(gtk.Frame):
         ##
         ## process the spacer columns
         ##
-        
+
         # use gtk.Fixed objects to set widths
         self.spacer_wgts = {}
         for key in [SA, SB, SC, SD, SE, SF]:
@@ -394,8 +401,8 @@ class CtrlPanel(gtk.Frame):
         # to right of answer: not much space needed, can overlap buttons at right
         self.spacer_wgts[SF].set_size_request(25, 13)
 
-        # box of buttons goes into the horizontal box flush-right, with padding
-        ctrlbtns_box = gtk.HBox(spacing=2)
+        # box of buttons goes into the horizontal box flush-right
+        ctrlbtns_box = gtk.HBox()
         for btn in self.ctrlbtns:
             ctrlbtns_box.pack_start(btn)
 
@@ -408,7 +415,7 @@ class CtrlPanel(gtk.Frame):
         self.add(overall_box)
         self.show_all()
 
-    def ChangeSign(self, btn):
+    def ChangeSign(self, _btn="not used"):
         """
         toggle between ADD/SUB modes
         """
@@ -454,7 +461,7 @@ class CtrlPanel(gtk.Frame):
         for ent in self.entries:
             ent.set_text("")
             ent.set_sensitive(True)
-        self.entries[Cpnl.N1].grab_focus()
+        self.entries[self.N1].grab_focus()
 
         # reinit buttons
         for btn in self.ctrlbtns + [self.opbtn]:
@@ -462,7 +469,7 @@ class CtrlPanel(gtk.Frame):
         self.ctrlbtns[self.DRAW].set_sensitive(False)
 
         # reinit answer label
-        self.entries[Cpnl.ANS].Reset()
+        self.entries[self.ANS].Reset()
 
         # continue with mode-specific initialization
         InitializeMode()
@@ -476,17 +483,15 @@ class CtrlPanel(gtk.Frame):
         global Num1, Num2, NumA
 
         # these are STRINGs, not INTs, normalize to P.COL_COUNT width
-        digits = [None, None]
-        for i in range(2):
-            digits[i] = Cpnl.entries[i].get_text().zfill(P.COL_COUNT)
+        digits = [ self.entries[i].get_text().zfill(P.COL_COUNT) for i in (0,1) ]
 
         # base y-coordinate for columns
         bottomY = 2 * P.COL_HGT
 
         # get left-edge coordinates of entry fields and answer field,
         # relative to the control panel
-        entry_posns = [ent.allocation for ent in Cpnl.entries]
-        cpnl_offset = Cpnl.allocation.x
+        entry_posns = [ent.allocation for ent in self.entries]
+        cpnl_offset = self.allocation.x
 
         if Mode == P.ADD_MODE:
             # center column block over first input number
@@ -506,7 +511,7 @@ class CtrlPanel(gtk.Frame):
             # Answer in SUB mode is a little higher
             NumA = AnswerNumber("nA", digits[0],
                                 entry_posns[0].x - cpnl_offset + entry_posns[0].width // 2,
-                                bottomY - P.ANSR_OFFSET)
+                                bottomY - P.UNIT_HGT)
             Num2 = Number("n2", digits[1],
                           entry_posns[1].x - cpnl_offset + entry_posns[1].width // 2,
                           bottomY)
@@ -514,7 +519,7 @@ class CtrlPanel(gtk.Frame):
             # enable borrow buttons (maybe)
             DrawBorrowButtons()
 
-        # disable button and entry fields
+        # disable buttons and entry fields
         for obj in [self.ctrlbtns[self.DRAW], self.opbtn] + self.entries:
             obj.set_sensitive(False)
 
@@ -540,9 +545,7 @@ class CtrlPanel(gtk.Frame):
                 fld.delete_text(cur-1, cur)
 
         # input values are STRINGs not INTs, to support non-decimal arithmetic
-        entry_strings = [None, None]
-        for i in [0,1]:
-            entry_strings[i] = self.entries[i].get_text()
+        entry_strings = [ self.entries[i].get_text() for i in (0,1) ]
 
         # enable Draw button if entries are valid
         # cannot enable if one or both of the input fields is blank
@@ -605,9 +608,8 @@ class Number(object):
             col.Draw()
 
             # column total
-            Bpnl.canv.put(col.total_label,
-                          col.x + P.COL_WID/2,
-                          col.y + P.ANSR_OFFSET)
+            # flush left on column, since label width == column width
+            Bpnl.canv.put(col.total_label, col.x, col.y + P.TOTAL_OFFSET)
 
         # record list in attribute
         return col_list
@@ -646,7 +648,7 @@ class Number(object):
                 blk.EnableDrag()
 
             #DbgPrint("before initial show", tuple(blk.drag_wgt.allocation))
-            col.Show()
+            col.ShowBlocks()
             #DbgPrint("after initial show", tuple(blk.drag_wgt.allocation))
 
 class AnswerNumber(Number):
@@ -689,6 +691,8 @@ class Column():
 
         self.total_label = gtk.Label()
         self.total_label.modify_font(P.FONT)
+        self.total_label.set_size_request(P.COL_WID, P.TOTAL_LABEL_HGT)
+        self.total_label.set_alignment(0.5, 0.5)
         self.total_label.show()
 
     def Index(self):
@@ -709,19 +713,15 @@ class Column():
         """
         draw a column
         """
-        # (width, height) of column
-        mysize = (P.COL_WID, P.COL_HGT)
-
         # sized image
         img = gtk.Image()
-        img.set_size_request(*mysize)
+        img.set_size_request(P.COL_WID, P.COL_HGT)
 
         # color it in
         PixelFill(img, self.color)
 
         # place column on canvas (gtk.Fixed)
-        x, y = self.UpperLeft()
-        Bpnl.canv.put(img, x, y)
+        Bpnl.canv.put(img, *self.UpperLeft())
 
         # cross-register gtk.Image and app's Column object
         self.image = img
@@ -745,7 +745,7 @@ class Column():
         """
         self.blocks.remove(blk)
 
-    def Add(self, blk, carry_button_suppress=False):
+    def PlaceBlock(self, blk, carry_button_suppress=False):
         """
         send an existing block to this column
         """
@@ -768,7 +768,7 @@ class Column():
         # ADD maybe create carry arrow
         if self.Total() >= P.BASE and not carry_button_suppress and not self.carryarrow:
             self.carryarrow = gtk.Button()
-            self.carryarrow.set_property("image", gtk.image_new_from_pixbuf(Pix[P.CARRY]))
+            self.carryarrow.set_image(gtk.image_new_from_pixbuf(Pix[P.CARRY]))
             Bpnl.canv.put(self.carryarrow,
                            self.x + P.ARROW_OFFSET[0],
                            self.y + P.ARROW_OFFSET[1])
@@ -777,12 +777,11 @@ class Column():
             CarryCount += 1
             DbgPrint("Created carry arrow:", self.carryarrow)
 
-    def Show(self):
+    def ShowBlocks(self):
         """
         display the column's blocks
         display the total of the blocks in a label below the column
         """
-
         # calculation of total is always performed in base-10
         total = 0
 
@@ -792,8 +791,6 @@ class Column():
                # first, adjust upward by height of block
                # second, adjust upward to account for earlier blocks in this column
                self.y - (blk.value * P.UNIT_HGT) - (total * P.UNIT_HGT))
-
-            #blk.drag_wgt.show()
 
             # update column total
             total += blk.value
@@ -809,7 +806,7 @@ class Column():
             strval = str(total)
         ## two digits
         else:
-            digit_list = map(str, list(divmod(total, P.BASE)))
+            digit_list = map(str, divmod(total, P.BASE))
             strval = "".join(digit_list)
 
         self.total_label.set_text(strval)
@@ -822,8 +819,7 @@ class Column():
         """
         base-10 total of column's blocks
         """
-        values = [blk.value for blk in self.blocks]
-        return sum(values)
+        return sum([blk.value for blk in self.blocks])
 
     def Carry(self, event):
         """
@@ -849,41 +845,41 @@ class Column():
             blk.drag_wgt.destroy()
         srccol.blocks = []
 
-        # block of P.BASE units
-        fillblk = Block(P.BASE, srccol, True)
-        #DbgPrint("before carry add:", tuple(fillblk.drag_wgt.allocation))
-        #DbgPrint("after carry add:", tuple(fillblk.drag_wgt.allocation))
+        # "full-column" block -- P.BASE units
+        fullblk = Block(P.BASE, srccol, carry_button_suppress=True)
+        #DbgPrint("before carry add:", tuple(fullblk.drag_wgt.allocation))
+        #DbgPrint("after carry add:", tuple(fullblk.drag_wgt.allocation))
 
-        # "excess block" (1+ units)
-        excessblk = None
-        if total > P.BASE:
-            excessblk = Block(total - P.BASE, srccol, True)
+        # "excess" block (1+ units)
+        excessblk = (Block(total - P.BASE, srccol, carry_button_suppress=True)
+                     if total > P.BASE else
+                     None)
 
-        srccol.Show()
+        srccol.ShowBlocks()
         sleep(P.PAUSE)
 
         # collapse the block of P.BASE units into a single unit
         # TBD: change the color to that of the "carry-to" column
-        pbufs = fillblk.GenScaledPixbufs(P.ADD_MODE)
+        pbufs = fullblk.GenScaledPixbufs(P.ADD_MODE)
 
         for smaller_pbuf in pbufs:
-            eventbox = fillblk.drag_wgt
+            sleep(P.SHRINK_EXPAND_DELAY)
+            eventbox = fullblk.drag_wgt
             # get rid of old image, add new one
             eventbox.remove(eventbox.get_child())
             eventbox.add(gtk.image_new_from_pixbuf(smaller_pbuf))
-            # show animatation step
+            # show animation step
             UpdateScreen()
-            sleep(P.SHRINK_EXPAND_DELAY)
+        sleep(P.PAUSE)
 
         # move the shrunken (1-unit-high) block to the next column
-        sleep(P.PAUSE)
-        AniMove(fillblk.drag_wgt,
+        AniMove(fullblk.drag_wgt,
                 destcol.x + P.BLOCK_PAD,
-                destcol.y - destcol.Total()*P.UNIT_HGT - 1*P.UNIT_HGT)
+                destcol.y - (destcol.Total() + 1) * P.UNIT_HGT)
 
         # dest column: replace shrunken P.BASE-unit block with 1-unit "carry block"
-        carryblk = Block(1, destcol)
-        destcol.Show()
+        Block(1, destcol)
+        destcol.ShowBlocks()
 
         # drop the "excess block" into position
         if excessblk:
@@ -891,10 +887,10 @@ class Column():
                     srccol.x + P.BLOCK_PAD,
                     srccol.y - excessblk.value * P.UNIT_HGT)
 
-        # source column: delete the "fill block", and update column total
-        fillblk.drag_wgt.destroy()
-        srccol.Remove(fillblk)
-        srccol.Show()
+        # source column: delete the "full-column" block, and update column total
+        fullblk.drag_wgt.destroy()
+        srccol.Remove(fullblk)
+        srccol.ShowBlocks()
 
         # are we done?
         CalcAnswer()
@@ -915,12 +911,11 @@ class Column():
         srccol_index = srccol.Index()
 
         # decompose last block in this column (ex: 8 --> 7+1)
-        borrow_orig_blk = srccol.blocks[-1]
-        borrow_val = borrow_orig_blk.value
+        original_blk = srccol.blocks[-1]
 
         # delete the topmost block from this column
-        borrow_orig_blk.drag_wgt.destroy()
-        srccol.Remove(borrow_orig_blk)
+        original_blk.drag_wgt.destroy()
+        srccol.Remove(original_blk)
 
         # delete the borrow arrow
         if srccol.borrowarrow:
@@ -928,54 +923,53 @@ class Column():
             srccol.borrowarrow = None
 
         # create block of size N-1, to be left behind in this column
-        if borrow_val > 1:
-            remaining_blk = Block(borrow_val-1, srccol)
-            srccol.Show()
+        if original_blk.value > 1:
+            remaining_blk = Block(original_blk.value-1, srccol)
+            srccol.ShowBlocks()
 
         # create block of size 1, which will get borrowed
-        borrow_from_blk = Block(1, srccol)
-        srccol.Show()
+        borrow_blk = Block(1, srccol)
+        srccol.ShowBlocks()
 
         # at GTK level, move the unexpanded (1-unit-high) block to next column
         top_of_destblock_Y = destcol.y - destcol.Total()*P.UNIT_HGT
-        AniMove(borrow_from_blk.drag_wgt,
+        AniMove(borrow_blk.drag_wgt,
                 destcol.x + P.BLOCK_PAD,
                 top_of_destblock_Y - 1*P.UNIT_HGT)
 
         # expand vertically from 1 unit to P.BASE units
-        sleep(P.PAUSE)
-        eventbox = borrow_from_blk.drag_wgt
+        newblk_color = P.BLOCK_PIXEL_COLORS[self.Index()-1]
+        eventbox = borrow_blk.drag_wgt
         for i in range(1, P.BASE+1):
+            sleep(P.SHRINK_EXPAND_DELAY)
             eventbox.remove(eventbox.get_child())
-            img, _ = CreateBlockImage(i, P.BLOCK_PIXEL_COLORS[self.Index()-1], True)
+            img, _ = CreateBlockImage(i, newblk_color, borrow_block_flag=True)
             eventbox.add(img)
             Bpnl.canv.move(eventbox,
                 eventbox.allocation.x,
                 top_of_destblock_Y - i*P.UNIT_HGT)
             # show animation step
             UpdateScreen()
-            sleep(P.SHRINK_EXPAND_DELAY)
 
-        # at application level, replace "borrow from" block in source column
-        # with "borrow to" block in destination column
-        borrow_from_blk.drag_wgt.destroy()
-        srccol.Remove(borrow_from_blk)
-        srccol.Show()
-        borrow_to_block = Block(P.BASE, destcol)
-        destcol.Show()
+        # at application level, replace "borrow from" block in source column ...
+        borrow_blk.drag_wgt.destroy()
+        srccol.Remove(borrow_blk)
+        srccol.ShowBlocks()
+        # ... with "borrow to" block in destination column
+        Block(P.BASE, destcol)
+        destcol.ShowBlocks()
 
         # recalc the borrow buttons
         DrawBorrowButtons()
 
 class Block(object):
     """
-    represents one digit of a multipsrccol_indexigit number
+    represents one digit of a number
     """
     def __init__(self, value, colobj, carry_button_suppress=False):
         self.value = value
-        self.color = P.BLOCK_PIXEL_COLORS[colobj.Index()]
-        # will be filled in by Column.Add()
-        self.column = None
+        self.column = colobj
+        self.color = P.BLOCK_PIXEL_COLORS[self.column.Index()]
 
         # create rectangle image for the block
         # EventBox -> Image -> Pixmap -> Pixbuf
@@ -987,12 +981,12 @@ class Block(object):
 
         # event box with sized image
         ebox = gtk.EventBox()
+        # self.pmap to be used by GenScaledPixbufs()
         img, self.pmap = CreateBlockImage(self.value, self.color)
         ebox.add(img)
 
         # cross-link draggable gtk.EventBox widget and app's Block object
         ebox.block = self
-        ebox.set_double_buffered(False)
         self.drag_wgt = ebox
 
         # put the image in upper left corner, but make it invisible
@@ -1003,7 +997,7 @@ class Block(object):
         self.callback_ids = []
 
         # add the Block to the specified Column
-        colobj.Add(self, carry_button_suppress)
+        self.column.PlaceBlock(self, carry_button_suppress)
 
     def UpperLeft(self):
         """
@@ -1032,6 +1026,7 @@ class Block(object):
         # generator loop: yield a series of Pixbufs, of decreasing size
         x0, y0 = mysize
         count = 12
+        # "sf" is scale factor
         for sf in (end*(1.0*i/count) + start*(1-1.0*i/count) for i in range(1, count+1)):
             # scale vertically, but not horizontally
             y = int(sf * y0)
@@ -1043,9 +1038,9 @@ class Block(object):
         """
         make block draggable
         """
-        self.callback_ids.append(self.drag_wgt.connect("button_press_event", WidgetClicked))
-        self.callback_ids.append(self.drag_wgt.connect("motion_notify_event", MoveWidget))
-        self.callback_ids.append(self.drag_wgt.connect("button_release_event", PlaceWidget))
+        self.callback_ids.append(self.drag_wgt.connect("button_press_event", BlockClicked))
+        self.callback_ids.append(self.drag_wgt.connect("motion_notify_event", MoveBlock))
+        self.callback_ids.append(self.drag_wgt.connect("button_release_event", DropBlock))
 
     def DisableDrag(self):
         """
@@ -1059,11 +1054,14 @@ class Block(object):
 ### functions
 ###
 
-def WidgetClicked(widget, context):
+def BlockClicked(widget, context):
+    """
+    callback: mouse clicked on a Block
+    """
     global SnapX, SnapY, ClickX, ClickY, TargetColumn
 
     alloc = widget.allocation
-    # global (SnapX, SnapY) is location of widget when first clicked
+    # global (SnapX, SnapY) is location of Block when first clicked
     SnapX = alloc.x
     SnapY = alloc.y
     ClickX = int(context.x)
@@ -1073,26 +1071,21 @@ def WidgetClicked(widget, context):
     widget.window.raise_()
 
     # set the corresponding answer column as the drag-drop target
-    TargetColumn = SetTargetColumn(widget)
+    col_number = widget.block.column.Index()
+    TargetColumn = NumA.columns[col_number]
 
     #DbgPrint("widget allocation: (%d,%d) width=%d, height=%d" % (SnapX, SnapY, alloc.width, alloc.height))
     #DbgPrint("offset within widget: (%d,%d)" % (ClickX, ClickY))
 
-def SetTargetColumn(widget):
+def MoveBlock(widget, context):
     """
-    return the Column (i.e. gtk.EventBox) that is
-    the target of the selected Block (i.e. gtk.EventBox)
+    callback: dragging a Block
     """
-    col_number = widget.block.column.Index()
-    target_obj = NumA.columns[col_number]
-    return target_obj
-
-def MoveWidget(widget, context):
     global DropOk
 
     # where is mouse pointer now, in canvas coordinates?
     parentX, parentY = widget.translate_coordinates(Bpnl.canv, int(context.x), int(context.y))
-    
+
     # move Block widget, taking into account position of mouse click (ClickX, ClickY)
     # within the Block
     Bpnl.canv.move(widget, parentX - ClickX, parentY - ClickY)
@@ -1115,25 +1108,31 @@ def MoveWidget(widget, context):
         PixelFill(TargetColumn.image, TargetColumn.color)
         DropOk = False
 
-def PlaceWidget(widget, context):
-
-    global DropOk
+def DropBlock(widget, context):
+    """
+    callback: mouse released on a Block being dragged
+    """
+    global DropOk, TargetColumn
 
     if Mode == P.ADD_MODE:
-        PlaceWidget_Add(widget)
+        DropBlock_Add(widget)
     elif Mode == P.SUBTRACT_MODE:
-        PlaceWidget_Sub(widget)
+        DropBlock_Sub(widget)
 
-    CalcAnswer()
+    # in all cases, reset target column background
+    PixelFill(TargetColumn.image, TargetColumn.color)
+
+    # reset parms
     DropOk = False
     TargetColumn = None
 
-def PlaceWidget_Sub(widget):
-    """
-    handle a mouse-up event in SUB mode
-    """
-    global DropOk
+    # are we done?
+    CalcAnswer()
 
+def DropBlock_Sub(widget):
+    """
+    callback: mouse released on a Block being dragged (SUBTRACT mode)
+    """
     blk = widget.block
     origcol = blk.column
 
@@ -1147,12 +1146,11 @@ def PlaceWidget_Sub(widget):
 
         # move the block to be subtracted
         AniMove(widget, endX, endY)
-        sleep(P.PAUSE)
 
         # delete block from original column
         blk.drag_wgt.destroy()
         origcol.Remove(blk)
-        origcol.Show()
+        origcol.ShowBlocks()
 
         ##
         ## process result
@@ -1168,7 +1166,7 @@ def PlaceWidget_Sub(widget):
         # create result block (maybe) and show value
         if result > 0:
             blk = Block(result, TargetColumn)
-        TargetColumn.Show()
+        TargetColumn.ShowBlocks()
 
         # recalc the borrow buttons
         DrawBorrowButtons()
@@ -1179,16 +1177,10 @@ def PlaceWidget_Sub(widget):
                 origcol.x + P.BLOCK_PAD,
                 origcol.y - blk.value*P.UNIT_HGT)
 
-    # in all cases, reset flag and target column background
-    PixelFill(TargetColumn.image, TargetColumn.color)
-    DropOk = False
-
-def PlaceWidget_Add(widget):
+def DropBlock_Add(widget):
     """
-    handle a mouse-up event in ADD mode
+    callback: mouse released on a Block being dragged (ADD mode)
     """
-    global DropOk, TargetColumn
-
     if DropOk:
         blk = widget.block
         origcol = blk.column
@@ -1204,16 +1196,13 @@ def PlaceWidget_Add(widget):
         AniMove(widget, endX, endY)
 
         # perform the move at object level, disable further interactions
-        TargetColumn.Add(blk)
+        TargetColumn.PlaceBlock(blk)
         origcol.Remove(blk)
         blk.DisableDrag()
 
-        # reset target column background
-        PixelFill(TargetColumn.image, TargetColumn.color)
-
         # show results
-        origcol.Show()
-        TargetColumn.Show()
+        origcol.ShowBlocks()
+        TargetColumn.ShowBlocks()
 
     else:
         # snap back
@@ -1225,8 +1214,9 @@ def AniMove(widget, endX, endY):
     """
     origX = widget.allocation.x
     origY = widget.allocation.y
-    count = 15
+    count = 12
     for i in range(1, count+1):
+        sleep(P.IN_COL/count)
         # set progress factor, and move a little
         pf = i * 1.0 / count
         widget.parent.move(widget,
@@ -1234,10 +1224,11 @@ def AniMove(widget, endX, endY):
                            int(pf*endY + (1-pf)*origY))
         # show animation step
         UpdateScreen()
-        sleep(P.IN_COL/count)
 
     # final move, to take care of roundoff errors
     widget.parent.move(widget, endX, endY)
+    # pause for effect
+    sleep(P.PAUSE)
 
 def InTargetColumn(widget):
     """
@@ -1272,7 +1263,7 @@ def InitializeMode():
     if Mode == P.ADD_MODE:
         Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['first'][0])
         Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['second'][0])
-    else:
+    elif Mode == P.SUBTRACT_MODE:
         Cpnl.entry_labels[0].set_text(P.DISPLAY_STR['larger'][0])
         Cpnl.entry_labels[1].set_text(P.DISPLAY_STR['smaller'][0])
 
@@ -1290,7 +1281,7 @@ def DrawBorrowButtons():
         # as appropriate, create borrow image and set binding
         if destcol.Total() <  Num2.columns[idx].Total() and not srccol.borrowarrow:
             srccol.borrowarrow = gtk.Button()
-            srccol.borrowarrow.set_property("image", gtk.image_new_from_pixbuf(Pix[P.BORROW]))
+            srccol.borrowarrow.set_image(gtk.image_new_from_pixbuf(Pix[P.BORROW]))
             srccol.borrowarrow.show_all()
             Bpnl.canv.put(srccol.borrowarrow,
                           destcol.x + P.ARROW_OFFSET[0],
@@ -1306,7 +1297,7 @@ def CalcAnswer():
     """
     # are we ready to calculate?
     if Mode == P.ADD_MODE:
-        if any([col.Total() for col in Num1.columns + Num2.columns]) or CarryCount > 0:
+        if CarryCount > 0 or any([col.Total() for col in Num1.columns + Num2.columns]):
             return
     elif Mode == P.SUBTRACT_MODE: # note: there is no 'BorrowCount' to check
         if any([col.Total() for col in Num2.columns]):
@@ -1328,7 +1319,7 @@ def CalcAnswer():
         strval = "".join(map(str, reversed(digit_list)))
 
     # show and bell
-    Cpnl.entries[2].set_text(strval)
+    Cpnl.entries[Cpnl.ANS].set_text(strval)
     gtk.gdk.beep()
 
 def SetBgColor(widget, colorstr):
@@ -1442,7 +1433,7 @@ def LoadImages():
         "......     ....     ..........",
         "......      ..       .........",
         ".......     ..      ..........",
-        ".........  ....   ............"        
+        ".........  ....   ............"
     ]
 
     PLUS = [
@@ -1496,7 +1487,7 @@ def LoadImages():
         "..........................",
         ".........................."
     ]
-    
+
     def _image_new_from_xpm_data(datalist):
         """
         create image using XPM data list
@@ -1516,7 +1507,8 @@ def LoadImages():
 
 def SpacerWidth(label_keys, answ_col_flag=False):
     """
-    determine width for spacer Frame for a specified label-width
+    determine width for spacer Frame for one or both sides of a label
+    label_keys specs a *set* of labels; will use max label width from this set
     flag indicates this is answer column (needs wider spacer in ADD mode, for carry column)
     """
     # width of column set; extra answer column for carry in ADD mode
@@ -1527,7 +1519,7 @@ def SpacerWidth(label_keys, answ_col_flag=False):
 
     # calculate max width of label that appears in this column
     max_label_wid = max(P.DISPLAY_STR[key][1] for key in label_keys)
-    
+
     # spacer width depends on whether label width exceeds column-set width
     return (half_col
             if max_label_wid > col_set_width else
@@ -1537,30 +1529,32 @@ def SpacerWidth(label_keys, answ_col_flag=False):
 ### main routine
 ###
 
+# for Sugar activity, encapsulate the main-routine code in a class
+
 mytype = activity.Activity if SUGAR_ACTIVITY else object
-  
+
 class BlockHeadActivity(mytype):
 
     def __init__(self, handle=None):
         global Mode, HelpWin, MyDrawable, Pix, MainWin, Bpnl, Cpnl
         if SUGAR_ACTIVITY:
             activity.Activity.__init__(self, handle)
-        
+
         Mode = P.ADD_MODE
         HelpWin = None
-    
+
         # we need an invisible Drawable, for use by SetDisplayStringWidths()
         # also, CreateBlockImage() needs it to establish pixel-depth of a Pixmap
         _tempwin = gtk.Window()
         _tempwin.realize()
         MyDrawable = _tempwin.window
-    
+
         # establish string widths
         SetDisplayStringWidths()
-    
+
         # load images for operator button and carry/borrow buttons
         Pix = LoadImages()
-    
+
         # set up main window
         if SUGAR_ACTIVITY:
             MainWin = gtk.Frame()
@@ -1572,29 +1566,25 @@ class BlockHeadActivity(mytype):
             MainWin.set_resizable(False)
             MainWin.set_position(gtk.WIN_POS_CENTER)
             MainWin.connect('destroy', lambda _: gtk.main_quit())
-     
+
         # vertical box holds block canvas (BlockPanel) and control panel (CtrlPanel)
-        #
-        # NOTE: calculations of column and block locations use widget "allocation"
-        # attributes, which are window-global coordinates. Thus, Bpnl and Cpnl should
-        # both be left-aligned with overall window, MainWin.
         vb = gtk.VBox()
         algn = gtk.Alignment(0.5, 0.5)
         algn.add(vb)
         MainWin.add(algn)
-    
+
         # canvas where columns/blocks appear, at top
         Bpnl = BlockPanel(111, 2*P.BASE*P.UNIT_HGT + P.WINDOW_HGT_ADJ)
         # ?? why is next statement necessary for correct block-position calculations?
         Bpnl.canv.set_has_window(True)
-        SetBgColor(Bpnl.canv, P.CANV_COLOR)
+        SetBgColor(Bpnl.canv, P.CANV_COLOR_STR)
         vb.pack_start(Bpnl.canv, expand=True, fill=True)
-    
+
         # control panel, at bottom
         Cpnl = CtrlPanel()
         Cpnl.NewCmd(None)
         vb.pack_start(Cpnl, expand=True, fill=True)
-    
+
         # go
         MainWin.show_all()
 
