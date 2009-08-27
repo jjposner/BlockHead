@@ -23,11 +23,11 @@ with number base <= 10
 """
 
 __date__ = '26-Aug-2009'
-__version__ = 2075
+__version__ = 2075.1 # only diff: SUGAR_ACTIVITY setting
 
 # set to True to run as an OLPC/Sugar "activity"
 # set to False to run as a standard Python program
-SUGAR_ACTIVITY = False
+SUGAR_ACTIVITY = True
 
 import pygtk
 pygtk.require('2.0')
