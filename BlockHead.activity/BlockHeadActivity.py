@@ -22,8 +22,8 @@ add or subtract two multiple-digit numbers,
 with number base <= 10
 """
 
-__date__ = '26-Aug-2009'
-__version__ = 2075.1 # only diff: SUGAR_ACTIVITY setting
+__date__ = '29-Aug-2009'
+__version__ = 2076.1 # SUGAR_ACTIVITY set to True
 
 # set to True to run as an OLPC/Sugar "activity"
 # set to False to run as a standard Python program
